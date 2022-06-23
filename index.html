@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Template</title>
+  <meta charset="UTF-8" />
+  <style>
+    #gameScreen {
+      border: 1px solid black;
+    }
+
+    img {
+      display: none;
+    }
+
+    .fullscreenButton {
+      font-size: 10pt;
+      padding: 5pt;
+      color: rgb(100, 100, 100);
+      background-color: white;
+      font-weight: 600;
+      border-radius: 10px;
+      border-color: black;
+      text-shadow: 5pt;
+    }
+
+    .fullscreenButton:hover {
+      background-color: lightgray;
+    }
+
+    .fullscreenButton:active {
+      background-color: darkgray;
+    }
+  </style>
+</head>
+
+<body>
+  <img id="1" src="assets/images/1.png" />
+  <img id="2" src="assets/images/2.png" />
+  <img id="3" src="assets/images/3.png" />
+  <img id="4" src="assets/images/4.png" />
+  <img id="5" src="assets/images/5.png" />
+  <img id="6" src="assets/images/6.png" />
+  <img id="back" src="assets/images/back.png" />
+  <canvas id="gameScreen" width="832" height="832"></canvas>
+  <script>
+  class InputHandler {
+    constructor() {
+        document.addEventListener("keydown", (event) => {
+            switch (event.keyCode) {
+                default:
+                    break;
+            }
+        });
+        document.addEventListener("keyup", (event) => {
+            switch (event.keyCode) {
+                default:
+                    break;
+            }
+        });
+    }
+}
+
+const GAMESTATE = {
+    MENU: 0,
+    RUNNING: 1,
+};
+
+function increase() {
+    if (game.gamestate === GAMESTATE.RUNNING) {
+        game.time += 0.1;
+        game.time = Math.round(game.time * 100) / 100
+    }
+}
+
+class Card {
+    constructor(game, position, number, height) {
+        this.image = document.getElementById("back");
+        this.position = position;
+        this.height = height;
+        this.width = height * 0.75;
+        this.markedForDeletion = false;
+        this.visible = false;
+        this.number = number;
+        this.game = game;
+    }
+
+    update() {
+        if (this.visible) {
+            this.image = document.getElementById(this.number);
+        }
+        else {
+            this.image = document.getElementById("back");
+        }
+    }
+
+    draw(ctx) {
+        ctx.drawImage(this.image, this.position.x, this.position.y, this.width, this.height);
+    }
+}
+
+function buildLevel(game) {
+    var frameMargin = 100;
+    var spaceY = (game.gameHeight - frameMargin * 2) / (game.rows * 5 - 1);
+    var cardHeight = spaceY * 4;
+    var cardWidth = cardHeight * 0.75;
+    var spaceX = (game.gameWidth - frameMargin * 2 - game.lines * cardWidth) / (game.lines - 1)
+    var cardNumbers = [];
+    var cards = [];
+    for (var i = 1; i <= game.lines * game.rows / 2; i++) {
+        cardNumbers[cardNumbers.length] = i;
+        cardNumbers[cardNumbers.length] = i;
+    }
+
+    for (var i = 0; i < game.lines; i++) {
+        for (var i2 = 0; i2 < game.rows; i2++) {
+            var random = Math.floor(Math.random() * cardNumbers.length);
+            var cardNumber = cardNumbers.splice(random, 1)[0];
+            let position = { x: frameMargin + i * (cardWidth + spaceX), y: frameMargin + i2 * (cardHeight + spaceY) };
+            cards.push(new Card(game, position, cardNumber, cardHeight));
+        }
+    }
+    return cards;
+}
+
+class Game {
+    constructor(gameWidth, gameHeight) {
+        this.gameWidth = gameWidth;
+        this.gameHeight = gameHeight;
+        this.gameObjects = [];
+        this.gamestate = GAMESTATE.MENU;
+        new InputHandler();
+        this.time = 0;
+
+        this.lines = 4;
+        this.rows = 3;
+    }
+
+    start() {
+        this.gameObjects = [];
+        this.gamestate = GAMESTATE.RUNNING;
+        this.cards = buildLevel(this);
+        //setInterval(increase, 100);
+        this.visibleCards = [];
+        this.waitingForInput = true;
+    }
+
+    update(deltaTime) {
+        if (
+            this.gamestate === GAMESTATE.MENU
+        ) {
+            return;
+        }
+        this.cards = this.cards.filter((card) => !card.markedForDeletion);
+        [...this.gameObjects, ...this.cards].forEach((object) =>
+            object.update(deltaTime)
+        );
+    }
+
+    draw(ctx) {
+        //var bg = document.getElementById("bg");
+        //ctx.drawImage(bg, 0, 0);
+        ctx.rect(0, 0, this.gameWidth, this.gameHeight);
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fill();
+
+        if (this.gamestate === GAMESTATE.RUNNING) {
+            [...this.gameObjects, ...this.cards].forEach((object) => object.draw(ctx));
+        }
+
+        /*ctx.font = "bold 60px Arial";
+        ctx.fillStyle = "white";
+        ctx.textAlign = "left";
+        ctx.fillText(this.time, 10, 55);*/
+
+        if (this.gamestate === GAMESTATE.MENU) {
+            ctx.rect(0, 0, this.gameWidth, this.gameHeight);
+            ctx.fillStyle = "rgb(0, 0, 0)";
+            ctx.fill();
+
+            ctx.font = "bold 50px Arial";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                "Klicke, um zu starten",
+                this.gameWidth / 2,
+                this.gameHeight / 2 + 20
+            );
+        }
+    }
+}
+
+let canvas = document.getElementById("gameScreen");
+let ctx = canvas.getContext("2d");
+
+var game_width = 0;
+var game_height = 0;
+
+if (window.innerWidth < window.innerHeight) {
+    game_width = window.innerWidth - 50;
+    game_height = window.innerWidth - 50;
+}
+else {
+    game_width = window.innerHeight - 50;
+    game_height = window.innerHeight - 50;
+}
+
+document.getElementById("gameScreen").width = game_width;
+document.getElementById("gameScreen").height = game_height;
+
+let game = new Game(game_width, game_height);
+
+var fullScreenCanvas = document.querySelector('canvas');
+
+var mouseX = 0;
+var mouseY = 0;
+
+function detectCollision(xPoint, yPoint, x, y, width, height) {
+    return xPoint > x && xPoint < x + width && yPoint > y && yPoint < y + height;
+}
+
+function fullScreen() {
+    var el = document.getElementById('gameScreen')
+    if (el.webkitRequestFullScreen) {
+        el.webkitRequestFullScreen(); GAME_HEIGHT
+    }
+    else {
+        el.mozRequestFullScreen();
+    }
+}
+
+function checkClick(object) {
+    if (detectCollision(mouseX, mouseY, object.position.x, object.position.y, object.width, object.height)) {
+        if (!object.visible) {
+            object.visible = true;
+            game.visibleCards.push(object);
+        }
+    }
+}
+
+function hide() {
+    game.visibleCards[0].visible = false;
+    game.visibleCards[1].visible = false;
+    game.visibleCards = [];
+    game.waitingForInput = true;
+}
+
+function removeCards() {
+    game.visibleCards[0].markedForDeletion = true;
+    game.visibleCards[1].markedForDeletion = true;
+    game.visibleCards = [];
+    game.waitingForInput = true;
+    if (game.cards.length === 2) {
+        game.start();
+    }
+}
+
+function click() {
+    if (!(game.gamestate === GAMESTATE.RUNNING)) {
+        game.start();
+    }
+    else {
+        if (game.waitingForInput) {
+            game.cards.forEach((object) =>
+                checkClick(object)
+            );
+            if (game.visibleCards.length === 2) {
+                if (game.visibleCards[0].number === game.visibleCards[1].number) {
+                    setTimeout(removeCards, 500);
+                    game.waitingForInput = false;
+                }
+                else {
+                    setTimeout(hide, 500);
+                    game.waitingForInput = false;
+                }
+            }
+        }
+    }
+}
+
+function released() {
+
+}
+
+function moved(evt, canvas) {
+    var rect = canvas.getBoundingClientRect();
+    mouseX = evt.clientX - rect.left;
+    mouseY = evt.clientY - rect.top;
+}
+
+fullScreenCanvas.addEventListener("mousedown", click);
+fullScreenCanvas.addEventListener("mouseup", released);
+fullScreenCanvas.addEventListener("mousemove", function (evt) { moved(evt, fullScreenCanvas) });
+
+var lastTime = 0;
+
+function gameLoop(timestamp) {
+    let deltaTime = timestamp - lastTime;
+    if (deltaTime < 25) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+    lastTime = timestamp;
+    ctx.clearRect(0, 0, game_width, game_height);
+
+    game.update(deltaTime);
+    game.draw(ctx);
+
+    requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+  <br />
+  <!--<button onclick="fullScreen()" class="fullscreenButton">Vollbild</button>-->
+</body>
+
+</html>
